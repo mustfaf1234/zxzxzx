@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تسجيل الدخول - مطار النجف</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f2f5;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      background-color: #004080;
+      color: white;
+      padding: 20px;
+      width: 100%;
+      text-align: center;
+      font-size: 18px;
+      line-height: 1.6;
+    }
+
+    .login-box {
+      margin-top: 50px;
+      background-color: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      width: 90%;
+      max-width: 400px;
+    }
+
+    .login-box input {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+
+    .login-box button {
+      background-color: #004080;
+      color: white;
+      padding: 12px;
+      border: none;
+      border-radius: 6px;
+      width: 100%;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .login-box p {
+      color: red;
+      font-size: 14px;
+      margin-top: 15px;
+    }
+
+    footer {
+      margin-top: 60px;
+      color: #555;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    مطار النجف الأشرف الدولي<br>
+    قسم عمليات ساحة الطيران / شعبة تنسيق الطائرات
+  </header>
+
+  <div class="login-box">
+    <h3 style="text-align: center;">تسجيل الدخول</h3>
+    <input type="email" id="email" placeholder="البريد الإلكتروني">
+    <input type="password" id="password" placeholder="كلمة السر">
+    <button onclick="login()">دخول</button>
+    <p>في حالة نسيان كلمة السر يرجى الاتصال بـ احمد عبد العالي كاظم</p>
+  </div>
+
+  <footer>© جميع الحقوق محفوظة</footer>
+  <!-- Firebase SDKs -->
+<script type="module">
+  // استيراد من مكتبة Firebase الجديدة (modular)
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+  
+  const firebaseConfig = {
+    apiKey: "AIzaSyCqOK8dAsYVd3G5kv6rFbrkDfLhmgFOXAU",
+    authDomain: "flight-scheduler-3daea.firebaseapp.com",
+    projectId: "flight-scheduler-3daea",
+    storageBucket: "flight-scheduler-3daea.appspot.com",
+    messagingSenderId: "1036581965112",
+    appId: "1:1036581965112:web:0bd21e436764ea4294c5cd"
+  };
+  
+  // تهيئة Firebase
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  
+  // دالة تسجيل الدخول
+  window.login = function() {
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value.trim();
+    
+    signInWithEmailAndPassword(auth, email, password)
+      .then((userCredential) => {
+        alert("تم تسجيل الدخول بنجاح");
+        window.location.href = "flights.html";
+      })
+      .catch((error) => {
+        alert("فشل تسجيل الدخول: " + error.message);
+      });
+  };
+</script>
+</body>
+</html>

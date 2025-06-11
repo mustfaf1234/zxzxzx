@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>رحلات اليوم</title>
+  <style>
+    body {
+      font-family: Arial;
+      background: #f2f2f2;
+      padding: 10px;
+      margin: 0;
+    }
+
+    header {
+      background-color: #004080;
+      color: white;
+      padding: 10px 15px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    header h3 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    #username {
+      font-size: 13px;
+    }
+
+    .logout {
+      background-color: red;
+      border: none;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      margin-top: 5px;
+    }
+
+    h2 {
+      text-align: center;
+      color: #004080;
+      margin-top: 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+      padding: 10px;
+      margin-bottom: 15px;
+    }
+
+    .card h4 {
+      margin: 0 0 10px;
+      color: #004080;
+      font-size: 15px;
+    }
+
+    .form-group {
+      margin-bottom: 10px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 3px;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 6px;
+      font-size: 13px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+
+    button.save {
+      background-color: #004080;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: block;
+      margin: 20px auto;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h3>شعبة تنسيق الطائرات</h3>
+    <div id="username">مرحباً</div>
+    <button class="logout" onclick="logout()">خروج</button>
+  </header>
+
+  <h2>تسجيل 5 رحلات</h2>
+
+  <div id="cards"></div>
+
+  <button class="save" onclick="saveFlights()">حفظ الرحلات</button>
+  <button class="save" onclick="exportToPDF()">📄 تصدير PDF</button>
+
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCqOK8dAsYVd3G5kv6rFbrkDfLhmgFOXAU",
+      authDomain: "flight-scheduler-3daea.firebaseapp.com",
+      projectId: "flight-scheduler-3daea",
+      storageBucket: "flight-scheduler-3daea.appspot.com",
+      messagingSenderId: "1036581965112",
+      appId: "1:1036581965112:web:0bd21e436764ea4294c5cd"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    const fields = [
+      { key: 'date', label: 'التاريخ' },
+      { key: 'flightNo', label: 'FLT.NO' },
+      { key: 'onChocks', label: 'ON chocks' },
+      { key: 'openDoor', label: 'Open Door' },
+      { key: 'startCleaning', label: 'Start Cleaning' },
+      { key: 'completeCleaning', label: 'Complete Cleaning' },
+      { key: 'readyBoarding', label: 'Ready Boarding' },
+      { key: 'startBoarding', label: 'Start Boarding' },
+      { key: 'completeBoarding', label: 'Complete Boarding' },
+      { key: 'closeDoor', label: 'Close Door' },
+      { key: 'offChocks', label: 'Off chocks' },
+      { key: 'name', label: 'الاسم' },
+      { key: 'notes', label: 'ملاحظات', type: 'textarea' }
+    ];
+
+    const cardsContainer = document.getElementById("cards");
+
+    for (let i = 0; i < 5; i++) {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `<h4>الرحلة ${i + 1}</h4>`;
+      fields.forEach(field => {
+        const group = document.createElement("div");
+        group.className = "form-group";
+        const label = document.createElement("label");
+        label.textContent = field.label;
+        const input = field.type === 'textarea' ? document.createElement("textarea") : document.createElement("input");
+        input.dataset.row = i;
+        input.name = field.key;
+        group.appendChild(label);
+        group.appendChild(input);
+        card.appendChild(group);
+      });
+      cardsContainer.appendChild(card);
+    }
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        document.getElementById("username").textContent = user.email;
+      } else {
+        window.location.href = "index.html";
+      }
+    });
+
+    window.saveFlights = async function () {
+      const user = auth.currentUser;
+      if (!user) return;
+      const cards = document.querySelectorAll(".card");
+      let savedCount = 0;
+
+      for (let card of cards) {
+        const inputs = card.querySelectorAll("input, textarea");
+        const data = {};
+        let isFilled = false;
+        inputs.forEach(input => {
+          const value = input.value.trim();
+          data[input.name] = value;
+          if (value !== "") isFilled = true;
+        });
+        if (!isFilled) continue;
+        data.createdBy = user.email;
+        data.createdAt = serverTimestamp();
+        try {
+          await addDoc(collection(db, "flights"), data);
+          savedCount++;
+        } catch (err) {
+          console.error("خطأ:", err);
+        }
+      }
+
+      if (savedCount > 0) {
+        alert("✅ تم حفظ " + savedCount + " رحلة");
+      } else {
+        alert("⚠️ لم يتم حفظ أي رحلة. تأكد من تعبئة الحقول.");
+      }
+    };
+
+    window.logout = function () {
+      signOut(auth).then(() => {
+        window.location.href = "index.html";
+      });
+    };
+  </script>
+
+  <script>
+    window.addEventListener('load', () => {
+      const jsPDF = window.jspdf.jsPDF;
+
+      window.exportToPDF = function () {
+        const doc = new jsPDF();
+        let y = 10;
+
+        doc.setFont("Helvetica", "bold");
+        doc.setFontSize(12);
+        doc.text("جدول الرحلات", 105, y, { align: "center" });
+        y += 10;
+
+        const cards = document.querySelectorAll(".card");
+
+        cards.forEach((card, index) => {
+          const inputs = card.querySelectorAll("input, textarea");
+          let isFilled = false;
+          const data = {};
+          inputs.forEach(input => {
+            const value = input.value.trim();
+            data[input.name] = value;
+            if (value !== "") isFilled = true;
+          });
+
+          if (!isFilled) return;
+
+          doc.setFont("Helvetica", "normal");
+          doc.setFontSize(10);
+          doc.text(`الرحلة ${index + 1}:`, 10, y);
+          y += 6;
+
+          for (let key in data) {
+            doc.text(`${key}: ${data[key]}`, 12, y);
+            y += 6;
+          }
+
+          y += 4;
+          if (y > 270) {
+            doc.addPage();
+            y = 10;
+          }
+        });
+
+        doc.save("flights.pdf");
+      };
+    });
+  </script>
+
+</body>
+</html>
